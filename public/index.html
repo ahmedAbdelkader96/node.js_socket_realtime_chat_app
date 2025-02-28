@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #messages { list-style-type: none; margin: 0; padding: 0; }
+        #messages li { padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        #messageInput { width: 70%; }
+        #sendButton { width: 20%; }
+        #fileInput { width: 100%; }
+        .progress { display: inline-block; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Chat Application</h1>
+    <ul id="messages"></ul>
+    <input id="messageInput" type="text" placeholder="Type your message...">
+    <input id="fileInput" type="file">
+    <button id="sendButton">Send</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io('http://localhost:3000/');
+        const messagesList = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const fileInput = document.getElementById('fileInput');
+
+        // Fetch messages on load
+        fetch('http://localhost:3000/messages')
+            .then(response => response.json())
+            .then(messages => {
+                messages.forEach(message => {
+                    appendMessage(message);
+                });
+            })
+            .catch(error => console.error('Error fetching messages:', error));
+
+        // Sending text message
+        sendButton.addEventListener('click', () => {
+            const messageContent = messageInput.value;
+            const sender = 'Ahmed';
+            const timestamp = new Date();
+
+            if (messageContent) {
+                const messageData = { 
+                    _id: new Date().getTime().toString(), 
+                    content: messageContent, 
+                    sender, 
+                    type: 'text', 
+                    timestamp 
+                };
+                socket.emit('newMessage', messageData);
+                messageInput.value = '';
+            }
+        });
+
+        // Sending file message with progress
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+
+            if (file) {
+                const sender = 'Ahmed';
+                const reader = new FileReader();
+                const messageData = { 
+                    _id: new Date().getTime().toString(), 
+                    file: { 
+                        originalname: file.name, 
+                        mimetype: file.type 
+                    }, 
+                    sender 
+                };
+
+                // Create a message element with a loading percentage
+                const li = document.createElement('li');
+                const loadingText = document.createElement('span');
+                loadingText.textContent = `Sending file: ${file.name} - `;
+                const progressText = document.createElement('span');
+                progressText.className = 'progress';
+                progressText.textContent = '0%';
+                loadingText.appendChild(progressText);
+                li.appendChild(loadingText);
+                messagesList.appendChild(li);
+
+                // Read file as ArrayBuffer to get the progress
+                reader.onload = function () {
+                    messageData.file.buffer = reader.result;
+                    socket.emit('newFileMessage', messageData);
+                };
+
+                reader.onprogress = function (event) {
+                    if (event.lengthComputable) {
+                        const percentComplete = Math.round((event.loaded / event.total) * 100);
+                        progressText.textContent = `${percentComplete}%`;
+                    }
+                };
+
+                reader.onloadend = function () {
+                    // Optionally handle when loading is complete
+                };
+
+                reader.readAsArrayBuffer(file);
+                fileInput.value = '';
+            }
+        });
+
+        // Receiving messages
+        socket.on('message', (message) => {
+            appendMessage(message);
+        });
+
+        function appendMessage(message) {
+            const li = document.createElement('li');
+            let messageContent = `${message.sender}: `;
+            if (message.type === 'text') {
+                messageContent += message.content;
+            } else {
+                const viewButton = document.createElement('button');
+                viewButton.textContent = 'View';
+                viewButton.onclick = () => window.open(`https://express-mongo-vercel-crud-projec-production.up.railway.app/file/${message._id}`, '_blank');
+                messageContent += `File sent: ${message.content} `;
+                li.appendChild(viewButton);
+            }
+            li.textContent = messageContent;
+            messagesList.appendChild(li);
+        }
+    </script>
+</body>
+</html>
