@@ -68,8 +68,7 @@ function init(server) {
             uploadStream.end(file.buffer);
 
             uploadStream.on('finish', async () => {
-                const messageContent = `https://express-mongo-vercel-crud-projec-production.up.railway.app/file/${id}`;
-
+                const messageContent = `https://express-mongo-vercel-crud-projec-production.up.railway.app/messages/files/${id}`;
                 const message = new Message({
                     _id: id,
                     type: messageType,
