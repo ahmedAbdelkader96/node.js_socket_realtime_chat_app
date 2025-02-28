@@ -49,95 +49,55 @@ router.get('/', async (req, res) => {
 // });
 
 
-router.post('/', upload.array('files', 10), async (req, res) => {
-  const { content, sender } = req.body;
+router.post('/upload', upload.single('file'), async (req, res) => {
+  const { sender, tempId } = req.body;
+  const file = req.file;
+  const id = new mongoose.Types.ObjectId();
+  const mimeType = mime.lookup(file.originalname);
+  let messageType;
 
-  if (!sender) {
-    return res.status(400).json({ message: 'Sender is required' });
-  }
-
-  const messages = [];
-  const files = req.files;
-
-  if (files && files.length > 0) {
-    const uploadPromises = files.map(file => {
-      return new Promise((resolve, reject) => {
-        const id = new mongoose.Types.ObjectId();
-        const mimeType = mime.lookup(file.originalname);
-        let messageType;
-
-        if (mimeType.startsWith('image/')) {
-          messageType = 'image';
-        } else if (mimeType.startsWith('video/')) {
-          messageType = 'video';
-        } else if (mimeType.startsWith('audio/')) {
-          messageType = 'sound';
-        } else {
-          messageType = 'file';
-        }
-
-        const uploadStream = gfsBucket.openUploadStreamWithId(id, file.originalname, {
-          contentType: file.mimetype,
-          metadata: { sender }
-        });
-
-        uploadStream.end(file.buffer);
-
-        uploadStream.on('finish', async () => {
-          const messageContent = `/messages/files/${id}`;
-
-          const message = new Message({
-            _id: id,
-            type: messageType,
-            content: messageContent,
-            senderName: sender,
-            timestamp: new Date()
-          });
-
-          try {
-            socket.getIo().emit('message', message); // Emit message before saving
-            const newMessage = await message.save();
-            resolve(newMessage);
-          } catch (err) {
-            reject(err);
-          }
-        });
-
-        uploadStream.on('error', (err) => {
-          reject(err);
-        });
-      });
-    });
-
-    try {
-      const newMessages = await Promise.all(uploadPromises);
-      res.status(201).json(newMessages);
-    } catch (err) {
-      res.status(400).json({ message: err.message });
-    }
-  } else if (content) {
-    // Handle text message
-    const id = new mongoose.Types.ObjectId();
-    const message = new Message({
-      _id: id,
-      type: 'text',
-      content: content,
-      senderName: sender,
-      timestamp: new Date()
-    });
-
-    try {
-      socket.getIo().emit('message', message); // Emit message before saving
-      const newMessage = await message.save();
-      res.status(201).json(newMessage);
-    } catch (err) {
-      res.status(400).json({ message: err.message });
-    }
+  if (mimeType.startsWith('image/')) {
+      messageType = 'image';
+  } else if (mimeType.startsWith('video/')) {
+      messageType = 'video';
+  } else if (mimeType.startsWith('audio/')) {
+      messageType = 'sound';
   } else {
-    return res.status(400).json({ message: 'Content or file is required' });
+      messageType = 'file';
   }
-});
 
+  const uploadStream = gfsBucket.openUploadStreamWithId(id, file.originalname, {
+      contentType: file.mimetype,
+      metadata: { sender }
+  });
+
+  uploadStream.end(file.buffer);
+
+  uploadStream.on('finish', async () => {
+      const messageContent = `https://express-mongo-vercel-crud-projec-production.up.railway.app/messages/files/${id}`;
+      const message = new Message({
+          _id: id,
+          type: messageType,
+          content: messageContent,
+          sender: sender,
+          timestamp: new Date(),
+          tempId: tempId
+      });
+
+      try {
+          const savedMessage = await message.save();
+          res.status(201).json(savedMessage);
+      } catch (err) {
+          console.error(err);
+          res.status(500).json({ error: 'Failed to save message' });
+      }
+  });
+
+  uploadStream.on('error', (err) => {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to upload file' });
+  });
+});
 router.get('/files/:id', async (req, res) => {
   const fileId = req.params.id;
 
