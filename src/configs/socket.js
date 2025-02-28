@@ -24,7 +24,7 @@ function init(server) {
     io.on("connection", async (socket) => {
         console.log("New client connected");
 
-        socket.on("newMessage", async (data) => {
+        socket.on("AddNewTextMessage", async (data) => {
             const { content, sender, timestamp, status, tempId } = data;
             const message = new Message({
                 content: content,
@@ -38,14 +38,14 @@ function init(server) {
 
             try {
                 const savedMessage = await message.save();
-                io.emit('message', savedMessage);
+                io.emit('newTextMessage', savedMessage);
             } catch (err) {
                 console.error(err);
             }
         });
 
-        socket.on("newFileMessage", async (data) => {
-            const { file, sender, tempId } = data;
+        socket.on("AddNewFileMessage", async (data) => {
+            const { file, sender , status, tempId } = data;
             const id = new mongoose.Types.ObjectId();
             const mimeType = mime.lookup(file.originalname);
             let messageType;
@@ -77,12 +77,13 @@ function init(server) {
                     content: messageContent,
                     sender: sender,
                     timestamp: new Date(),
+                    status:status,
                     tempId: tempId
                 });
         
                 try {
                     const savedMessage = await message.save();
-                    io.emit('messageFile', savedMessage);
+                    io.emit('newFileMessage', savedMessage);
                 } catch (err) {
                     console.error(err);
                 }
