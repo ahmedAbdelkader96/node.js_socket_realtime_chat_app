@@ -23,14 +23,14 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io('http://localhost:3000/');
+        const socket = io('https://express-mongo-vercel-crud-projec-production.up.railway.app');
         const messagesList = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const fileInput = document.getElementById('fileInput');
 
         // Fetch messages on load
-        fetch('http://localhost:3000/messages')
+        fetch('https://express-mongo-vercel-crud-projec-production.up.railway.app/messages')
             .then(response => response.json())
             .then(messages => {
                 messages.forEach(message => {
