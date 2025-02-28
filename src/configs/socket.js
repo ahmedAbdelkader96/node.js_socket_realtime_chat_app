@@ -49,7 +49,7 @@ function init(server) {
             const id = new mongoose.Types.ObjectId();
             const mimeType = mime.lookup(file.originalname);
             let messageType;
-
+        
             if (mimeType.startsWith('image/')) {
                 messageType = 'image';
             } else if (mimeType.startsWith('video/')) {
@@ -59,14 +59,16 @@ function init(server) {
             } else {
                 messageType = 'file';
             }
-
+        
+            const buffer = Buffer.from(file.buffer, 'base64');
+        
             const uploadStream = gfsBucket.openUploadStreamWithId(id, file.originalname, {
                 contentType: file.mimetype,
                 metadata: { sender }
             });
-
-            uploadStream.end(file.buffer);
-
+        
+            uploadStream.end(buffer);
+        
             uploadStream.on('finish', async () => {
                 const messageContent = `https://express-mongo-vercel-crud-projec-production.up.railway.app/messages/files/${id}`;
                 const message = new Message({
@@ -77,15 +79,15 @@ function init(server) {
                     timestamp: new Date(),
                     tempId: tempId
                 });
-
+        
                 try {
                     const savedMessage = await message.save();
-                    io.emit('message', savedMessage);
+                    io.emit('messageFile', savedMessage);
                 } catch (err) {
                     console.error(err);
                 }
             });
-
+        
             uploadStream.on('error', (err) => {
                 console.error(err);
             });
