@@ -82,6 +82,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
           type: messageType,
           content: messageContent,
           sender: sender,
+          timestamp: new Date(),
           tempId: tempId
       });
 
