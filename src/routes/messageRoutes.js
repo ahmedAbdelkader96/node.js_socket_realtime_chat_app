@@ -32,23 +32,26 @@ router.get('/', async (req, res) => {
   }
 });
 
-// router.post("/", async (req, res) => {
-//   const { content, sender , status } = req.body;
+router.post("/", async (req, res) => {
+  const { content, sender , status } = req.body;
 
-//   const message = new Message({
-//     content: content,
-//     sender: sender,
-//     status: status,
-//     timestamp: new Date()
-//   });
+  const message = new Message({
+    content: content,
+    sender: sender,
+    status: status,
+    createdAt: new Date(),
+    seen: true,
+    tempId: '',
+    type: 'text'
+  });
 
-//   try {
-//     const savedMessage = await message.save();
-//     res.status(201).json(savedMessage);
-//   } catch (err) {
-//     res.status(400).json({ message: err.message });
-//   }
-// });
+  try {
+    const savedMessage = await message.save();
+    res.status(201).json(savedMessage);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
 
 
 router.post('/upload', upload.single('file'), async (req, res) => {
@@ -82,7 +85,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
           type: messageType,
           content: messageContent,
           sender: sender,
-          timestamp: new Date(),
+          createdAt: new Date(),
           tempId: tempId
       });
 

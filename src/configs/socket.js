@@ -25,11 +25,11 @@ function init(server) {
         console.log("New client connected");
 
         socket.on("AddNewTextMessage", async (data) => {
-            const { content, sender, timestamp, status, tempId } = data;
+            const { content, sender, createdAt, status, tempId } = data;
             const message = new Message({
                 content: content,
                 sender: sender,
-                timestamp: timestamp || new Date(),
+                createdAt: createdAt || new Date(),
                 status: status,
                 seen: false,
                 tempId: tempId,
@@ -76,7 +76,7 @@ function init(server) {
                     type: messageType,
                     content: messageContent,
                     sender: sender,
-                    timestamp: new Date(),
+                    createdAt: new Date(),
                     status:'sent',
                     tempId: tempId
                 });
