@@ -77,7 +77,7 @@ function init(server) {
                     content: messageContent,
                     sender: sender,
                     timestamp: new Date(),
-                    status:status,
+                    status:'sent',
                     tempId: tempId
                 });
         
