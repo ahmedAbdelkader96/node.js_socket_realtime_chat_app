@@ -29,7 +29,7 @@ function init(server) {
             const message = new Message({
                 content: content,
                 sender: sender,
-                createdAt:  Date(createdAt),
+                createdAt:  new Date(createdAt),
                 status: status,
                 seen: false,
                 tempId: tempId,
