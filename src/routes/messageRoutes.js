@@ -6,18 +6,23 @@ const mongoose = require('mongoose');
 const { GridFSBucket } = require('mongodb');
 const path = require('path');
 const mime = require('mime-types');
+const stream = require('stream');
 
+// Set up memory storage for multer
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 let gfsBucket;
+
+// Connect to MongoDB and set up GridFSBucket
 mongoose.connection.once('open', () => {
   gfsBucket = new GridFSBucket(mongoose.connection.db, {
     bucketName: 'uploads',
-    chunkSizeBytes: 1024 * 1024 // 1 MB chunk size
+    chunkSizeBytes: 1024 * 1024 * 2 // 2 MB chunk size
   });
 });
 
+// GET route for retrieving messages
 router.get('/', async (req, res) => {
   try {
     const messages = await Message.find().sort({ createdAt: -1 });
@@ -27,6 +32,7 @@ router.get('/', async (req, res) => {
   }
 });
 
+// POST route for saving text messages
 router.post("/", async (req, res) => {
   const { content, sender, status } = req.body;
 
@@ -48,6 +54,7 @@ router.post("/", async (req, res) => {
   }
 });
 
+// POST route for file uploads
 router.post('/upload', upload.single('file'), async (req, res) => {
   const { sender, tempId, filePath } = req.body;
   const file = req.file;
@@ -67,10 +74,15 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
   const uploadStream = gfsBucket.openUploadStreamWithId(id, file.originalname, {
     contentType: file.mimetype,
-    metadata: { sender }
+    metadata: { sender },
+    chunkSizeBytes: 1024 * 1024 * 2 // 2 MB chunk size
   });
 
-  uploadStream.end(file.buffer);
+  // Stream the file directly without buffering
+  const bufferStream = new stream.PassThrough();
+  bufferStream.end(file.buffer);
+  
+  bufferStream.pipe(uploadStream);
 
   uploadStream.on('finish', async () => {
     const messageContent = `https://express-mongo-vercel-crud-projec-production.up.railway.app/messages/files/${id}`;
@@ -99,6 +111,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
   });
 });
 
+// GET route for downloading files
 router.get('/files/:id', async (req, res) => {
   const fileId = req.params.id;
 
@@ -116,6 +129,7 @@ router.get('/files/:id', async (req, res) => {
   }
 });
 
+// PATCH route for marking messages as seen
 router.patch("/:id/seen", async (req, res) => {
   try {
     const message = await Message.findById(req.params.id);
