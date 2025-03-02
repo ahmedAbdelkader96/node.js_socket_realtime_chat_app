@@ -24,7 +24,7 @@ mongoose.connection.once('open', () => {
 router.get('/', async (req, res) => {
   try {
     // const messages = await Message.find().sort({ timestamp: -1 }).limit(10);
-    const messages = await Message.find().sort({ timestamp: -1 });
+    const messages = await Message.find().sort({ timestamp: 1 });
 
     res.json(messages);
   } catch (err) {
