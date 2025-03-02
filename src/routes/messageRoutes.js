@@ -24,7 +24,7 @@ mongoose.connection.once('open', () => {
 router.get('/', async (req, res) => {
   try {
     // const messages = await Message.find().sort({ timestamp: -1 }).limit(10);
-    const messages = await Message.find().sort({ timestamp: -1 }).limit(10);
+    const messages = await Message.find().sort({ timestamp: 1 }).limit(10);
 
     res.json(messages);
   } catch (err) {
@@ -39,7 +39,7 @@ router.post("/", async (req, res) => {
     content: content,
     sender: sender,
     status: status,
-    createdAt: new Date(),
+    createdAt:  new Date(),
     seen: true,
     tempId: '',
     type: 'text'
