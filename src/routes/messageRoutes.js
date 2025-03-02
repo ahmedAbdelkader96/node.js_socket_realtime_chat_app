@@ -7,25 +7,20 @@ const { GridFSBucket } = require('mongodb');
 const path = require('path');
 const mime = require('mime-types');
 
-
-
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 let gfsBucket;
 mongoose.connection.once('open', () => {
   gfsBucket = new GridFSBucket(mongoose.connection.db, {
-    bucketName: 'uploads'
+    bucketName: 'uploads',
+    chunkSizeBytes: 1024 * 1024 // 1 MB chunk size
   });
 });
 
-
-
 router.get('/', async (req, res) => {
   try {
-    // const messages = await Message.find().sort({ timestamp: -1 }).limit(10);
     const messages = await Message.find().sort({ createdAt: -1 });
-
     res.json(messages);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -33,13 +28,13 @@ router.get('/', async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const { content, sender , status } = req.body;
+  const { content, sender, status } = req.body;
 
   const message = new Message({
     content: content,
     sender: sender,
     status: status,
-    createdAt:  new Date(),
+    createdAt: new Date(),
     seen: true,
     tempId: '',
     type: 'text'
@@ -53,57 +48,57 @@ router.post("/", async (req, res) => {
   }
 });
 
-
 router.post('/upload', upload.single('file'), async (req, res) => {
-  const { sender, tempId ,filePath} = req.body;
+  const { sender, tempId, filePath } = req.body;
   const file = req.file;
   const id = new mongoose.Types.ObjectId();
   const mimeType = mime.lookup(file.originalname);
   let messageType;
 
   if (mimeType.startsWith('image/')) {
-      messageType = 'image';
+    messageType = 'image';
   } else if (mimeType.startsWith('video/')) {
-      messageType = 'video';
+    messageType = 'video';
   } else if (mimeType.startsWith('audio/')) {
-      messageType = 'sound';
+    messageType = 'sound';
   } else {
-      messageType = 'file';
+    messageType = 'file';
   }
 
   const uploadStream = gfsBucket.openUploadStreamWithId(id, file.originalname, {
-      contentType: file.mimetype,
-      metadata: { sender }
+    contentType: file.mimetype,
+    metadata: { sender }
   });
 
   uploadStream.end(file.buffer);
 
   uploadStream.on('finish', async () => {
-      const messageContent = `https://express-mongo-vercel-crud-projec-production.up.railway.app/messages/files/${id}`;
-      const message = new Message({
-          _id: id,
-          type: messageType,
-          content: messageContent,
-          sender: sender,
-          createdAt: new Date(),
-          tempId: tempId,
-          filePath:filePath
-      });
+    const messageContent = `https://express-mongo-vercel-crud-projec-production.up.railway.app/messages/files/${id}`;
+    const message = new Message({
+      _id: id,
+      type: messageType,
+      content: messageContent,
+      sender: sender,
+      createdAt: new Date(),
+      tempId: tempId,
+      filePath: filePath
+    });
 
-      try {
-          const savedMessage = await message.save();
-          res.status(201).json(savedMessage);
-      } catch (err) {
-          console.error(err);
-          res.status(500).json({ error: 'Failed to save message' });
-      }
+    try {
+      const savedMessage = await message.save();
+      res.status(201).json(savedMessage);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to save message' });
+    }
   });
 
   uploadStream.on('error', (err) => {
-      console.error(err);
-      res.status(500).json({ error: 'Failed to upload file' });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to upload file' });
   });
 });
+
 router.get('/files/:id', async (req, res) => {
   const fileId = req.params.id;
 
@@ -120,7 +115,6 @@ router.get('/files/:id', async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
 
 router.patch("/:id/seen", async (req, res) => {
   try {
