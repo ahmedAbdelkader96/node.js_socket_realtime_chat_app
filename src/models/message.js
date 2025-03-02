@@ -7,6 +7,7 @@ const messageSchema = new mongoose.Schema({
   status: { type: String, enum: ['sent','pending'], default: 'sent' },
   seen: { type: Boolean, default: false },
   tempId :{ type: String, default: '' , required: false },
+  filePath :{ type: String, default: '' , required: false },
   type: {
     type: String,
     enum: ['text', 'file', 'image', 'video', 'sound'],

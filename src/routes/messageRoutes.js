@@ -55,7 +55,7 @@ router.post("/", async (req, res) => {
 
 
 router.post('/upload', upload.single('file'), async (req, res) => {
-  const { sender, tempId } = req.body;
+  const { sender, tempId ,filePath} = req.body;
   const file = req.file;
   const id = new mongoose.Types.ObjectId();
   const mimeType = mime.lookup(file.originalname);
@@ -86,7 +86,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
           content: messageContent,
           sender: sender,
           createdAt: new Date(),
-          tempId: tempId
+          tempId: tempId,
+          filePath:filePath
       });
 
       try {

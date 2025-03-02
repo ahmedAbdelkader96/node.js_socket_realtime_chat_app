@@ -45,7 +45,7 @@ function init(server) {
         });
 
         socket.on("AddNewFileMessage", async (data) => {
-            const { file, sender , status, tempId } = data;
+            const { file, sender , status, tempId , filePath } = data;
             const id = new mongoose.Types.ObjectId();
             const mimeType = mime.lookup(file.originalname);
             let messageType;
@@ -78,7 +78,8 @@ function init(server) {
                     sender: sender,
                     createdAt: new Date(),
                     status:'sent',
-                    tempId: tempId
+                    tempId: tempId,
+                    filePath:filePath
                 });
         
                 try {
