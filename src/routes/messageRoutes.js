@@ -2,21 +2,20 @@ const express = require('express');
 const router = express.Router();
 const Message = require('../models/message');
 const multer = require('multer');
-const mongoose = require('mongoose');
-const { GridFSBucket } = require('mongodb');
+const AWS = require('aws-sdk');
 const mime = require('mime-types');
-const stream = require('stream'); // Import the stream module
+const mongoose = require('mongoose');
 
+// Configure AWS SDK
+AWS.config.update({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION
+});
+
+const s3 = new AWS.S3();
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
-
-let gfsBucket;
-mongoose.connection.once('open', () => {
-  gfsBucket = new GridFSBucket(mongoose.connection.db, {
-    bucketName: 'uploads',
-    chunkSizeBytes: 1024 * 1024 * 5// 1 MB chunk size
-  });
-});
 
 router.get('/', async (req, res) => {
   try {
@@ -51,7 +50,9 @@ router.post("/", async (req, res) => {
 router.post('/upload', upload.single('file'), async (req, res) => {
   const { sender, tempId, filePath } = req.body;
   const file = req.file;
-  const id = new mongoose.Types.ObjectId();
+   const id = new mongoose.Types.ObjectId();
+  
+  // const id = uuidv4();
   const mimeType = mime.lookup(file.originalname);
   let messageType;
 
@@ -65,17 +66,21 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     messageType = 'file';
   }
 
-  const uploadStream = gfsBucket.openUploadStreamWithId(id, file.originalname, {
-    contentType: file.mimetype,
-    metadata: { sender }
-  });
+  const params = {
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Key: `${id}-${file.originalname}`,
+    Body: file.buffer,
+    ContentType: file.mimetype,
+    Metadata: { sender }
+  };
 
-  const bufferStream = new stream.PassThrough();
-  bufferStream.end(file.buffer);
-  bufferStream.pipe(uploadStream);
+  s3.upload(params, async (err, data) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to upload file' });
+    }
 
-  uploadStream.on('finish', async () => {
-    const messageContent = `https://express-mongo-vercel-crud-projec-production.up.railway.app/messages/files/${id}`;
+    const messageContent = data.Location;
     const message = new Message({
       _id: id,
       type: messageType,
@@ -94,25 +99,26 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       res.status(500).json({ error: 'Failed to save message' });
     }
   });
-
-  uploadStream.on('error', (err) => {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to upload file' });
-  });
 });
 
 router.get('/files/:id', async (req, res) => {
   const fileId = req.params.id;
 
   try {
-    const file = await gfsBucket.find({ _id: new mongoose.Types.ObjectId(fileId) }).toArray();
-    if (!file || file.length === 0) {
-      return res.status(404).json({ message: 'File not found' });
-    }
+    const params = {
+      Bucket: process.env.AWS_S3_BUCKET_NAME,
+      Key: fileId
+    };
 
-    const readstream = gfsBucket.openDownloadStream(new mongoose.Types.ObjectId(fileId));
-    res.set('Content-Type', file[0].contentType);
-    readstream.pipe(res);
+    s3.getObject(params, (err, data) => {
+      if (err) {
+        console.error(err);
+        return res.status(404).json({ message: 'File not found' });
+      }
+
+      res.set('Content-Type', data.ContentType);
+      res.send(data.Body);
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
