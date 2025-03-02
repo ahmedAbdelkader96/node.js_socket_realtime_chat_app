@@ -14,7 +14,7 @@ let gfsBucket;
 mongoose.connection.once('open', () => {
   gfsBucket = new GridFSBucket(mongoose.connection.db, {
     bucketName: 'uploads',
-    chunkSizeBytes: 1024 * 1024 // 1 MB chunk size
+    chunkSizeBytes: 1024 * 1024 * 5// 1 MB chunk size
   });
 });
 
@@ -67,8 +67,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
   const uploadStream = gfsBucket.openUploadStreamWithId(id, file.originalname, {
     contentType: file.mimetype,
-    metadata: { sender },
-    chunkSizeBytes: 1024 * 1024 * 5 // 1 MB chunk size
+    metadata: { sender }
   });
 
   const bufferStream = new stream.PassThrough();
