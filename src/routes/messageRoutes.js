@@ -102,7 +102,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       Key: `uploads/${fileName}`,
       Body: optimizedBuffer,
       ContentType: fileType,
-      ContentDisposition: 'inline',
+      // ContentDisposition: 'inline',
  };
 
     s3.upload(params, async (err, data) => {
