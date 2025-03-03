@@ -103,8 +103,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       Body: optimizedBuffer,
       ContentType: fileType,
       ContentDisposition: 'inline',
-      ACL: 'public-read'
-    };
+ };
 
     s3.upload(params, async (err, data) => {
       if (err) {
