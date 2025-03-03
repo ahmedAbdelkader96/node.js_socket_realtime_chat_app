@@ -45,54 +45,74 @@ function init(server) {
         });
 
         socket.on("AddNewFileMessage", async (data) => {
-            const { file, sender , createdAt, tempId , filePath } = data;
-            const id = new mongoose.Types.ObjectId();
-            const mimeType = mime.lookup(file.originalname);
-            let messageType;
-        
-            if (mimeType.startsWith('image/')) {
-                messageType = 'image';
-            } else if (mimeType.startsWith('video/')) {
-                messageType = 'video';
-            } else if (mimeType.startsWith('audio/')) {
-                messageType = 'sound';
-            } else {
-                messageType = 'file';
-            }
-        
-            const buffer = Buffer.from(file.buffer, 'base64');
-        
-            const uploadStream = gfsBucket.openUploadStreamWithId(id, file.originalname, {
-                contentType: file.mimetype,
-                metadata: { sender }
+
+
+            const { content, sender, createdAt, tempId } = data;
+            const message = new Message({
+                content: content,
+                sender: sender,
+                createdAt:  new Date(createdAt),
+                status: 'sent',
+                seen: false,
+                tempId: tempId,
+                type: 'image'
             });
-        
-            uploadStream.end(buffer);
-        
-            uploadStream.on('finish', async () => {
-                const messageContent = `https://express-mongo-vercel-crud-projec-production.up.railway.app/messages/files/${id}`;
-                const message = new Message({
-                    _id: id,
-                    type: messageType,
-                    content: messageContent,
-                    sender: sender,
-                    createdAt: new Date(createdAt),
-                    status:'sent',
-                    tempId: tempId,
-                    filePath:filePath
-                });
-        
-                try {
-                    const savedMessage = await message.save();
-                    io.emit('newFileMessage', savedMessage);
-                } catch (err) {
-                    console.error(err);
-                }
-            });
-        
-            uploadStream.on('error', (err) => {
+
+            try {
+                const savedMessage = await message.save();
+                io.emit('newFileMessage', savedMessage);
+            } catch (err) {
                 console.error(err);
-            });
+            }
+
+            // const { file, sender , createdAt, tempId , filePath } = data;
+            // const id = new mongoose.Types.ObjectId();
+            // const mimeType = mime.lookup(file.originalname);
+            // let messageType;
+        
+            // if (mimeType.startsWith('image/')) {
+            //     messageType = 'image';
+            // } else if (mimeType.startsWith('video/')) {
+            //     messageType = 'video';
+            // } else if (mimeType.startsWith('audio/')) {
+            //     messageType = 'sound';
+            // } else {
+            //     messageType = 'file';
+            // }
+        
+            // const buffer = Buffer.from(file.buffer, 'base64');
+        
+            // const uploadStream = gfsBucket.openUploadStreamWithId(id, file.originalname, {
+            //     contentType: file.mimetype,
+            //     metadata: { sender }
+            // });
+        
+            // uploadStream.end(buffer);
+        
+            // uploadStream.on('finish', async () => {
+            //     const messageContent = `https://express-mongo-vercel-crud-projec-production.up.railway.app/messages/files/${id}`;
+            //     const message = new Message({
+            //         _id: id,
+            //         type: messageType,
+            //         content: messageContent,
+            //         sender: sender,
+            //         createdAt: new Date(createdAt),
+            //         status:'sent',
+            //         tempId: tempId,
+            //         filePath:filePath
+            //     });
+        
+            //     try {
+            //         const savedMessage = await message.save();
+            //         io.emit('newFileMessage', savedMessage);
+            //     } catch (err) {
+            //         console.error(err);
+            //     }
+            // });
+        
+            // uploadStream.on('error', (err) => {
+            //     console.error(err);
+            // });
         });
 
         socket.on("updateMessageStatus", async (data) => {
