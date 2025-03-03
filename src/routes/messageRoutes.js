@@ -3,7 +3,9 @@ const router = express.Router();
 const Message = require("../models/message");
 const multer = require("multer");
 const sharp = require("sharp");
+const ffmpeg = require("fluent-ffmpeg");
 const s3 = require("../configs/aws");
+const mongoose = require("mongoose");
 const path = require("path");
 const fs = require("fs");
 
@@ -23,47 +25,85 @@ router.get("/", async (req, res) => {
 router.post("/upload", upload.single("file"), async (req, res) => {
   const { sender } = req.body;
   const fileBuffer = req.file.buffer;
-  // const fileName = req.file.originalname;
-   const id = new mongoose.Types.ObjectId();
-  
+  const fileSize = req.file.size;
   const fileType = req.file.mimetype;
 
+  // Generate a new MongoDB ObjectId
+  const fileId = new mongoose.Types.ObjectId();
+  const fileExtension = path.extname(req.file.originalname);
+  const fileName = `${fileId}${fileExtension}`;
+
   try {
-    // Resize and compress the image using sharp
-    // const optimizedBuffer = await sharp(fileBuffer)
-    //   .resize({ width: 1000 }) // Resize the image to a width of 1000px
-    //   .jpeg({ quality: 80 }) // Compress the image to 35% quality
-    //   .toBuffer();
+    let optimizedBuffer = fileBuffer;
 
+    // Apply different transformations based on file type and size
+    if (fileType.startsWith('image/')) {
+      if (fileSize < 5 * 1024 * 1024) { // Less than 5 MB
+        optimizedBuffer = await sharp(fileBuffer)
+          .resize({ width: 1000 }) // Resize the image to a width of 1000px
+          .jpeg({ quality: 80 }) // Compress the image to 80% quality
+          .toBuffer();
+      } else if (fileSize < 10 * 1024 * 1024) { // Between 5 MB and 10 MB
+        optimizedBuffer = await sharp(fileBuffer)
+          .resize({ width: 800 }) // Resize the image to a width of 800px
+          .jpeg({ quality: 70 }) // Compress the image to 70% quality
+          .toBuffer();
+      } else { // Greater than 10 MB
+        optimizedBuffer = await sharp(fileBuffer)
+          .resize({ width: 600 }) // Resize the image to a width of 600px
+          .jpeg({ quality: 60 }) // Compress the image to 60% quality
+          .toBuffer();
+      }
+    } else if (fileType.startsWith('video/')) {
+      // Save the video buffer to a temporary file
+      const tempFilePath = path.join(__dirname, `../temp/${fileName}`);
+      fs.writeFileSync(tempFilePath, fileBuffer);
 
+      // Apply different ffmpeg transformations based on file size
+      if (fileSize < 50 * 1024 * 1024) { // Less than 50 MB
+        await new Promise((resolve, reject) => {
+          ffmpeg(tempFilePath)
+            .outputOptions('-vf', 'scale=1280:-1') // Resize the video to 1280px width
+            .outputOptions('-b:v', '1M') // Set video bitrate to 1 Mbps
+            .save(tempFilePath)
+            .on('end', resolve)
+            .on('error', reject);
+        });
+      } else if (fileSize < 100 * 1024 * 1024) { // Between 50 MB and 100 MB
+        await new Promise((resolve, reject) => {
+          ffmpeg(tempFilePath)
+            .outputOptions('-vf', 'scale=960:-1') // Resize the video to 960px width
+            .outputOptions('-b:v', '800k') // Set video bitrate to 800 kbps
+            .save(tempFilePath)
+            .on('end', resolve)
+            .on('error', reject);
+        });
+      } else { // Greater than 100 MB
+        await new Promise((resolve, reject) => {
+          ffmpeg(tempFilePath)
+            .outputOptions('-vf', 'scale=640:-1') // Resize the video to 640px width
+            .outputOptions('-b:v', '500k') // Set video bitrate to 500 kbps
+            .save(tempFilePath)
+            .on('end', resolve)
+            .on('error', reject);
+        });
+      }
 
-          let optimizedBuffer;
+      // Read the optimized video file back into a buffer
+      optimizedBuffer = fs.readFileSync(tempFilePath);
 
-    // Apply different sharp transformations based on file size
-    if (fileSize < 5 * 1024 * 1024) { // Less than 5 MB
-      optimizedBuffer = await sharp(fileBuffer)
-        .resize({ width: 1000 }) // Resize the image to a width of 1000px
-        .jpeg({ quality: 80 }) // Compress the image to 80% quality
-        .toBuffer();
-    } else if (fileSize < 10 * 1024 * 1024) { // Between 5 MB and 10 MB
-      optimizedBuffer = await sharp(fileBuffer)
-        .resize({ width: 800 }) // Resize the image to a width of 800px
-        .jpeg({ quality: 70 }) // Compress the image to 70% quality
-        .toBuffer();
-    } else { // Greater than 10 MB
-      optimizedBuffer = await sharp(fileBuffer)
-        .resize({ width: 600 }) // Resize the image to a width of 600px
-        .jpeg({ quality: 60 }) // Compress the image to 60% quality
-        .toBuffer();
+      // Delete the temporary file
+      fs.unlinkSync(tempFilePath);
     }
-    // Upload the optimized image to S3
+
+    // Upload the optimized file to S3
     const params = {
       Bucket: process.env.AWS_S3_BUCKET_NAME,
-      Key: `uploads/${id}`, 
+      Key: `uploads/${fileName}`,
       Body: optimizedBuffer,
       ContentType: fileType,
-      ContentDisposition: 'inline'
-      // ACL: 'public-read'
+      ContentDisposition: 'inline',
+      ACL: 'public-read'
     };
 
     s3.upload(params, async (err, data) => {
@@ -77,7 +117,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       const message = new Message({
         content: messageContent,
         sender: sender,
-        type: 'image',
+        type: fileType.startsWith('image/') ? 'image' : fileType.startsWith('video/') ? 'video' : 'audio',
         createdAt: new Date(),
       });
 
