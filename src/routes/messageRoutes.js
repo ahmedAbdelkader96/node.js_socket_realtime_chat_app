@@ -37,14 +37,14 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   const { sender } = req.body;
   const fileBuffer = req.file.buffer;
   const fileName = req.file.originalname;
-  const totalChunks = Math.ceil(fileBuffer.length / (1024 * 1024));
+  const totalChunks = Math.ceil(fileBuffer.length / (1024 * 1024 * 10));
 
   let globalFileId = new mongoose.Types.ObjectId();
   const uploadPromises = [];
 
   for (let i = 0; i < totalChunks; i++) {
-    const start = i * (1024 * 1024);
-    const end = Math.min(start + 1024 * 1024, fileBuffer.length);
+    const start = i * (1024 * 1024 * 10);
+    const end = Math.min(start + 1024 * 1024  * 10, fileBuffer.length);
 
     const chunkBuffer = fileBuffer.slice(start, end);
     const uploadStream = gfsBucket.openUploadStreamWithId(
@@ -52,7 +52,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       fileName,
       {
         contentType: mime.lookup(fileName),
-        chunkSizeBytes: 1024 * 1024, // 1 MB chunk size
+        chunkSizeBytes: 1024 * 1024 * 10, // 1 MB chunk size
       }
     );
 
