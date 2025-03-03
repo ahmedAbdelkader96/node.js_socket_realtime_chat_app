@@ -30,7 +30,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     // Resize and compress the image using sharp
     const optimizedBuffer = await sharp(fileBuffer)
       .resize({ width: 1000 }) // Resize the image to a width of 1000px
-      .jpeg({ quality: 100 }) // Compress the image to 35% quality
+      .jpeg({ quality: 80 }) // Compress the image to 35% quality
       .toBuffer();
 
     // Upload the optimized image to S3
