@@ -30,11 +30,32 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
   try {
     // Resize and compress the image using sharp
-    const optimizedBuffer = await sharp(fileBuffer)
-      .resize({ width: 1000 }) // Resize the image to a width of 1000px
-      .jpeg({ quality: 80 }) // Compress the image to 35% quality
-      .toBuffer();
+    // const optimizedBuffer = await sharp(fileBuffer)
+    //   .resize({ width: 1000 }) // Resize the image to a width of 1000px
+    //   .jpeg({ quality: 80 }) // Compress the image to 35% quality
+    //   .toBuffer();
 
+
+
+          let optimizedBuffer;
+
+    // Apply different sharp transformations based on file size
+    if (fileSize < 5 * 1024 * 1024) { // Less than 5 MB
+      optimizedBuffer = await sharp(fileBuffer)
+        .resize({ width: 1000 }) // Resize the image to a width of 1000px
+        .jpeg({ quality: 80 }) // Compress the image to 80% quality
+        .toBuffer();
+    } else if (fileSize < 10 * 1024 * 1024) { // Between 5 MB and 10 MB
+      optimizedBuffer = await sharp(fileBuffer)
+        .resize({ width: 800 }) // Resize the image to a width of 800px
+        .jpeg({ quality: 70 }) // Compress the image to 70% quality
+        .toBuffer();
+    } else { // Greater than 10 MB
+      optimizedBuffer = await sharp(fileBuffer)
+        .resize({ width: 600 }) // Resize the image to a width of 600px
+        .jpeg({ quality: 60 }) // Compress the image to 60% quality
+        .toBuffer();
+    }
     // Upload the optimized image to S3
     const params = {
       Bucket: process.env.AWS_S3_BUCKET_NAME,
