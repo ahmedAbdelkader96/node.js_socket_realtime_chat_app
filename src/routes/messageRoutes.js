@@ -23,7 +23,9 @@ router.get("/", async (req, res) => {
 router.post("/upload", upload.single("file"), async (req, res) => {
   const { sender } = req.body;
   const fileBuffer = req.file.buffer;
-  const fileName = req.file.originalname;
+  // const fileName = req.file.originalname;
+   const id = new mongoose.Types.ObjectId();
+  
   const fileType = req.file.mimetype;
 
   try {
@@ -36,7 +38,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     // Upload the optimized image to S3
     const params = {
       Bucket: process.env.AWS_S3_BUCKET_NAME,
-      Key: `uploads/${fileName}`,
+      Key: `uploads/${id}`, 
       Body: optimizedBuffer,
       ContentType: fileType,
       ContentDisposition: 'inline'
