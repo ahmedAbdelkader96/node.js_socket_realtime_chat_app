@@ -55,45 +55,71 @@ router.post("/upload", upload.single("file"), async (req, res) => {
           .toBuffer();
       }
     } else if (fileType.startsWith('video/')) {
+      // Ensure the temp directory exists
+      const tempDir = path.join(__dirname, '../temp');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
       // Save the video buffer to a temporary file
-      const tempFilePath = path.join(__dirname, `../temp/${fileName}`);
-      fs.writeFileSync(tempFilePath, fileBuffer);
+      const tempInputFilePath = path.join(tempDir, `input_${fileName}`);
+      const tempOutputFilePath = path.join(tempDir, `output_${fileName}`);
+      fs.writeFileSync(tempInputFilePath, fileBuffer);
 
       // Apply different ffmpeg transformations based on file size
       if (fileSize < 50 * 1024 * 1024) { // Less than 50 MB
         await new Promise((resolve, reject) => {
-          ffmpeg(tempFilePath)
-            .outputOptions('-vf', 'scale=1280:-1') // Resize the video to 1280px width
+          ffmpeg(tempInputFilePath)
+            .outputOptions('-vf', 'scale=1280:-2') // Resize the video to 1280px width, height divisible by 2
             .outputOptions('-b:v', '1M') // Set video bitrate to 1 Mbps
-            .save(tempFilePath)
+            .save(tempOutputFilePath)
+            .on('start', (commandLine) => {
+              console.log('Spawned Ffmpeg with command: ' + commandLine);
+            })
+            .on('stderr', (stderrLine) => {
+              console.log('Stderr output: ' + stderrLine);
+            })
             .on('end', resolve)
             .on('error', reject);
         });
       } else if (fileSize < 100 * 1024 * 1024) { // Between 50 MB and 100 MB
         await new Promise((resolve, reject) => {
-          ffmpeg(tempFilePath)
-            .outputOptions('-vf', 'scale=960:-1') // Resize the video to 960px width
+          ffmpeg(tempInputFilePath)
+            .outputOptions('-vf', 'scale=960:-2') // Resize the video to 960px width, height divisible by 2
             .outputOptions('-b:v', '800k') // Set video bitrate to 800 kbps
-            .save(tempFilePath)
+            .save(tempOutputFilePath)
+            .on('start', (commandLine) => {
+              console.log('Spawned Ffmpeg with command: ' + commandLine);
+            })
+            .on('stderr', (stderrLine) => {
+              console.log('Stderr output: ' + stderrLine);
+            })
             .on('end', resolve)
             .on('error', reject);
         });
       } else { // Greater than 100 MB
         await new Promise((resolve, reject) => {
-          ffmpeg(tempFilePath)
-            .outputOptions('-vf', 'scale=640:-1') // Resize the video to 640px width
+          ffmpeg(tempInputFilePath)
+            .outputOptions('-vf', 'scale=640:-2') // Resize the video to 640px width, height divisible by 2
             .outputOptions('-b:v', '500k') // Set video bitrate to 500 kbps
-            .save(tempFilePath)
+            .save(tempOutputFilePath)
+            .on('start', (commandLine) => {
+              console.log('Spawned Ffmpeg with command: ' + commandLine);
+            })
+            .on('stderr', (stderrLine) => {
+              console.log('Stderr output: ' + stderrLine);
+            })
             .on('end', resolve)
             .on('error', reject);
         });
       }
 
       // Read the optimized video file back into a buffer
-      optimizedBuffer = fs.readFileSync(tempFilePath);
+      optimizedBuffer = fs.readFileSync(tempOutputFilePath);
 
-      // Delete the temporary file
-      fs.unlinkSync(tempFilePath);
+      // Delete the temporary files
+      fs.unlinkSync(tempInputFilePath);
+      fs.unlinkSync(tempOutputFilePath);
     }
 
     // Upload the optimized file to S3
@@ -102,8 +128,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       Key: `uploads/${fileName}`,
       Body: optimizedBuffer,
       ContentType: fileType,
-      // ContentDisposition: 'inline',
- };
+      ContentDisposition: 'inline',
+    };
 
     s3.upload(params, async (err, data) => {
       if (err) {
