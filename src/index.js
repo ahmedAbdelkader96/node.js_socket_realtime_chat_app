@@ -7,6 +7,7 @@ const morgan = require("morgan");
 const http = require("http");
 const connectDB = require("./configs/db");
 
+
 const messageRoutes = require("./routes/messageRoutes");
 const socket = require("./configs/socket");
 const path = require("path");

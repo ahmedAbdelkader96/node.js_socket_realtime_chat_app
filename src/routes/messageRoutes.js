@@ -2,23 +2,14 @@ const express = require("express");
 const router = express.Router();
 const Message = require("../models/message");
 const multer = require("multer");
-const mongoose = require("mongoose");
-const { GridFSBucket } = require("mongodb");
-const mime = require("mime-types");
-const stream = require("stream"); // Import the stream module
+const sharp = require("sharp");
+const s3 = require("../configs/aws");
 const path = require("path");
 const fs = require("fs");
 
+// Configure multer for file uploads
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
-
-let gfsBucket;
-mongoose.connection.once("open", () => {
-  gfsBucket = new GridFSBucket(mongoose.connection.db, {
-    bucketName: "uploads",
-    chunkSizeBytes: 1024 * 1024, // 1 MB chunk size
-  });
-});
 
 router.get("/", async (req, res) => {
   try {
@@ -30,61 +21,49 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/upload", upload.single("file"), async (req, res) => {
-  if (!gfsBucket) {
-    return res.status(500).json({ error: "MongoDB connection is not established" });
-  }
-
   const { sender } = req.body;
   const fileBuffer = req.file.buffer;
   const fileName = req.file.originalname;
-  const totalChunks = Math.ceil(fileBuffer.length / (1024 * 1024 * 10));
-
-  let globalFileId = new mongoose.Types.ObjectId();
-  const uploadPromises = [];
-
-  for (let i = 0; i < totalChunks; i++) {
-    const start = i * (1024 * 1024 * 10);
-    const end = Math.min(start + 1024 * 1024  * 10, fileBuffer.length);
-
-    const chunkBuffer = fileBuffer.slice(start, end);
-    const uploadStream = gfsBucket.openUploadStreamWithId(
-      globalFileId,
-      fileName,
-      {
-        contentType: mime.lookup(fileName),
-        chunkSizeBytes: 1024 * 1024 * 10, // 1 MB chunk size
-      }
-    );
-
-    const uploadPromise = new Promise((resolve, reject) => {
-      uploadStream.write(chunkBuffer);
-      uploadStream.end();
-      uploadStream.on("finish", resolve);
-      uploadStream.on("error", reject);
-    });
-
-    uploadPromises.push(uploadPromise);
-    console.log(`Uploaded chunk ${i + 1}/${totalChunks}`);
-  }
+  const fileType = req.file.mimetype;
 
   try {
-    await Promise.all(uploadPromises);
+    // Resize and compress the image using sharp
+    const optimizedBuffer = await sharp(fileBuffer)
+      .resize({ width: 1000 }) // Resize the image to a width of 1000px
+      .jpeg({ quality: 100 }) // Compress the image to 35% quality
+      .toBuffer();
 
-    // Create a message with the global file link
-    const messageContent = `https://express-mongo-vercel-crud-projec-production.up.railway.app/messages/files/${globalFileId}`;
-    const message = new Message({
-      content: messageContent,
-      sender: sender,
-      type: mime.lookup(fileName),
-      createdAt: new Date(),
+    // Upload the optimized image to S3
+    const params = {
+      Bucket: process.env.AWS_S3_BUCKET_NAME,
+      Key: `uploads/${fileName}`,
+      Body: optimizedBuffer,
+      ContentType: fileType,
+      // ACL: 'public-read'
+    };
+
+    s3.upload(params, async (err, data) => {
+      if (err) {
+        console.error("Error uploading to S3:", err);
+        return res.status(500).json({ error: "Failed to upload to S3" });
+      }
+
+      // Create a message with the S3 file link
+      const messageContent = data.Location;
+      const message = new Message({
+        content: messageContent,
+        sender: sender,
+        type: 'image',
+        createdAt: new Date(),
+      });
+
+      const savedMessage = await message.save();
+      console.log("Message saved:", savedMessage);
+      res.status(201).json({ message: savedMessage, fileUrl: messageContent });
     });
-
-    const savedMessage = await message.save();
-    console.log("Message saved:", savedMessage);
-    res.status(201).json({ message: savedMessage, fileUrl: messageContent });
   } catch (err) {
-    console.error("Error saving message:", err);
-    res.status(500).json({ error: "Failed to save message" });
+    console.error("Error processing file:", err);
+    res.status(500).json({ error: "Failed to process file" });
   }
 });
 
@@ -92,18 +71,12 @@ router.get("/files/:id", async (req, res) => {
   const fileId = req.params.id;
 
   try {
-    const file = await gfsBucket
-      .find({ _id: new mongoose.Types.ObjectId(fileId) })
-      .toArray();
-    if (!file || file.length === 0) {
+    const message = await Message.findById(fileId);
+    if (!message) {
       return res.status(404).json({ message: "File not found" });
     }
 
-    const readstream = gfsBucket.openDownloadStream(
-      new mongoose.Types.ObjectId(fileId)
-    );
-    res.set("Content-Type", file[0].contentType);
-    readstream.pipe(res);
+    res.redirect(message.content); // Redirect to the S3 file URL
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
