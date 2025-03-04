@@ -7,11 +7,7 @@ const mime = require('mime-types');
 let io;
 let gfsBucket;
 
-mongoose.connection.once('open', () => {
-    gfsBucket = new GridFSBucket(mongoose.connection.db, {
-        bucketName: 'uploads'
-    });
-});
+
 
 function init(server) {
     io = socketIo(server, {
@@ -25,7 +21,7 @@ function init(server) {
         console.log("New client connected");
 
         socket.on("AddNewTextMessage", async (data) => {
-            const { content, sender, createdAt, status, tempId } = data;
+            const { content, sender, createdAt, status, tempId , type } = data;
             const message = new Message({
                 content: content,
                 sender: sender,
@@ -33,7 +29,7 @@ function init(server) {
                 status: status,
                 seen: false,
                 tempId: tempId,
-                type: 'text'
+                type: type
             });
 
             try {
