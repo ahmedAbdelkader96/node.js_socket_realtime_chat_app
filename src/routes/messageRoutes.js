@@ -5,6 +5,7 @@ const multer = require("multer");
 const sharp = require("sharp");
 const ffmpeg = require("fluent-ffmpeg");
 const s3 = require("../configs/aws");
+const { PutObjectCommand } = require("@aws-sdk/client-s3");
 const mongoose = require("mongoose");
 const path = require("path");
 const fs = require("fs");
@@ -73,6 +74,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       // Apply different ffmpeg transformations based on file size
       if (fileSize < 10 * 1024 * 1024) { // Less than 10 MB
         await new Promise((resolve, reject) => {
+          console.log("Less than 10 MB fileSize",fileSize/(1024*1024))
+
           ffmpeg(tempInputFilePath)
             .outputOptions([
               // "-b:v 300k", // Set video bitrate to 800 kbps
@@ -82,17 +85,18 @@ router.post("/upload", upload.single("file"), async (req, res) => {
               // "-vf scale=720:-2" // Scale to a width of 720 pixels, maintaining aspect ratio
           ]) // Set video bitrate to 1 Mbps
             .save(tempOutputFilePath)
-            .on('start', (commandLine) => {
-              console.log('Spawned Ffmpeg with command: ' + commandLine);
-            })
-            .on('stderr', (stderrLine) => {
-              console.log('Stderr output: ' + stderrLine);
-            })
+            // .on('start', (commandLine) => {
+            //   console.log('Spawned Ffmpeg with command: ' + commandLine);
+            // })
+            // .on('stderr', (stderrLine) => {
+            //   console.log('Stderr output: ' + stderrLine);
+            // })
             .on('end', resolve)
             .on('error', reject);
         });
       } else if (fileSize < 50 * 1024 * 1024) { // Between 10 and 50 MB
         await new Promise((resolve, reject) => {
+          console.log("Between 50 MB and 100 MB fileSize",fileSize/(1024*1024))
           ffmpeg(tempInputFilePath)
             .outputOptions([
               // "-b:v 300k", // Set video bitrate to 800 kbps
@@ -113,6 +117,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         });
       } else if (fileSize < 100 * 1024 * 1024) { // Between 50 MB and 100 MB
         await new Promise((resolve, reject) => {
+          console.log("Between 50 MB and 100 MB fileSize",fileSize/(1024*1024))
+
           ffmpeg(tempInputFilePath)
             .outputOptions([
               "-b:v 800k", // Set video bitrate to 800 kbps
@@ -133,6 +139,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         });
       } else { // Greater than 100 MB
         await new Promise((resolve, reject) => {
+          console.log("Greater than 100 MB fileSize",fileSize/(1024*1024))
+
           ffmpeg(tempInputFilePath)
             .outputOptions([
               "-b:v 2000k", // Set video bitrate to 2000 kbps
@@ -170,7 +178,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       ContentDisposition: 'inline',
     };
 
-    const s3UploadPromise = s3.upload(params).promise();
+    const s3UploadPromise = s3.send(new PutObjectCommand(params));
 
     // Create a message with the S3 file link
     const messageContent = `https://files16.s3.amazonaws.com/uploads/${fileName}`;
