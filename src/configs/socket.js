@@ -86,7 +86,7 @@ function init(server) {
             // uploadStream.end(buffer);
         
             // uploadStream.on('finish', async () => {
-            //     const messageContent = `https://express-mongo-vercel-crud-projec-production.up.railway.app/messages/files/${id}`;
+            //     const messageContent = `https://express-mongo-vercel-crud-projec-production-9faf.up.railway.app/messages/files/${id}`;
             //     const message = new Message({
             //         _id: id,
             //         type: messageType,

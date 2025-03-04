@@ -23,14 +23,14 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io('https://express-mongo-vercel-crud-projec-production.up.railway.app');
+        const socket = io('https://express-mongo-vercel-crud-projec-production-9faf.up.railway.app');
         const messagesList = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const fileInput = document.getElementById('fileInput');
  
         // Fetch messages on load
-        fetch('https://express-mongo-vercel-crud-projec-production.up.railway.app/messages')
+        fetch('https://express-mongo-vercel-crud-projec-production-9faf.up.railway.app/messages')
             .then(response => response.json())
             .then(messages => {
                 messages.forEach(message => {
@@ -120,7 +120,7 @@
             } else {
                 const viewButton = document.createElement('button');
                 viewButton.textContent = 'View';
-                viewButton.onclick = () => window.open(`https://express-mongo-vercel-crud-projec-production.up.railway.app/file/${message._id}`, '_blank');
+                viewButton.onclick = () => window.open(`https://express-mongo-vercel-crud-projec-production-9faf.up.railway.app/file/${message._id}`, '_blank');
                 messageContent += `File sent: ${message.content} `;
                 li.appendChild(viewButton);
             }
