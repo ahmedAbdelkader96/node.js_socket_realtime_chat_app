@@ -24,7 +24,7 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/upload", upload.single("file"), async (req, res) => {
-  const { sender, filePath , base64ForThumb} = req.body;
+  const { sender, filePath , base64} = req.body;
   const fileBuffer = req.file.buffer;
   const fileSize = req.file.size;
   const fileType = req.file.mimetype;
@@ -207,7 +207,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         ,
       createdAt: new Date(),
       filePath: filePath,
-      base64ForThumb:base64ForThumb
+      base64:base64
     });
 
     const savedMessagePromise = message.save();
