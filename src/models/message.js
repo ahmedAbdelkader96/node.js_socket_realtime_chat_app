@@ -8,6 +8,7 @@ const messageSchema = new mongoose.Schema({
   seen: { type: Boolean, default: false },
   tempId :{ type: String, default: '' , required: false },
   filePath :{ type: String, default: '' , required: false },
+  base64ForThumb :{ type: String, default: '' , required: false },
   type: {
     type: String,
     enum: ['text', 'file', 'image', 'video', 'audio'],
