@@ -203,13 +203,13 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       content: messageContent,
       sender: sender,
       type: 
-      fileType
-      // fileType.startsWith("image/")
-      //   ? 
-      //   "image"
-      //   : fileType.startsWith("video/")
-      //   ? "video"
-      //   : "audio"
+      
+      fileType.startsWith("image/")
+        ? 
+        "image"
+        : fileType.startsWith("video/")
+        ? "video"
+        : "audio"
         ,
       createdAt: new Date(),
       filePath: filePath,
