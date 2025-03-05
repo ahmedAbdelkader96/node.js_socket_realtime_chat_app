@@ -9,6 +9,7 @@ const { PutObjectCommand } = require("@aws-sdk/client-s3");
 const mongoose = require("mongoose");
 const path = require("path");
 const fs = require("fs");
+const mime = require("mime-types");
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -28,7 +29,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   const { sender, filePath , base64} = req.body;
   const fileBuffer = req.file.buffer;
   const fileSize = req.file.size;
-  const fileType = req.file.mimetype;
+  const fileExtension = path.extname(req.file.originalname);
+  const fileType = mime.lookup(fileExtension) || req.file.mimetype;
+
 
   // Generate a new MongoDB ObjectId
   const fileId = new mongoose.Types.ObjectId();
