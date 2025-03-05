@@ -35,7 +35,6 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
   // Generate a new MongoDB ObjectId
   const fileId = new mongoose.Types.ObjectId();
-  const fileExtension = path.extname(req.file.originalname);
   const fileName = `${fileId}${fileExtension}`;
 
   try {
