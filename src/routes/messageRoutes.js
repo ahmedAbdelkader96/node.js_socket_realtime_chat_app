@@ -211,14 +211,14 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     // const savedMessagePromise = message.save();
 
-    const [s3UploadResult, savedMessage] = await Promise.all([
+    const [s3UploadResult] = await Promise.all([
       s3UploadPromise,
       // savedMessagePromise,
     ]);
 
     res
       .status(201)
-      .json({ message: savedMessage, fileUrl: s3UploadResult.Location });
+      .json({ fileUrl: s3UploadResult.Location });
   } catch (err) {
     console.error("Error processing file:", err);
     // Delete the temporary files
