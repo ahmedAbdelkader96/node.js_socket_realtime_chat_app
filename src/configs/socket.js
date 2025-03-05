@@ -43,20 +43,23 @@ function init(server) {
         socket.on("AddNewFileMessage", async (data) => {
 
 
-            // const { content, sender, createdAt, tempId , type} = data;
-            // const message = new Message({
-            //     content: content,
-            //     sender: sender,
-            //     createdAt:  new Date(createdAt),
-            //     status: 'sent',
-            //     seen: false,
-            //     tempId: tempId,
-            //     type: type
-            // });
+            const { content, sender, createdAt, tempId , type , base64} = data;
+            const message = new Message({
+                content: content,
+                sender: sender,
+                createdAt:  new Date(createdAt),
+                status: 'sent',
+                seen: false,
+                tempId: tempId,
+                type: type,
+                base64:base64
 
+            });
+ 
             try {
-                // const savedMessage = await message.save();
                 io.emit('newFileMessage', data);
+                const savedMessage = await message.save();
+                // io.emit('newFileMessage', data);
             } catch (err) {
                 console.error(err);
             }

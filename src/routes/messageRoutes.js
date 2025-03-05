@@ -29,7 +29,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   const fileBuffer = req.file.buffer;
   const fileSize = req.file.size;
   const fileExtension = path.extname(req.file.originalname);
-  const fileType = req.body.type;
+  const fileType = type;
 
 
   // Generate a new MongoDB ObjectId
@@ -198,25 +198,27 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const messageContent = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/uploads/${fileName}`;
 
-    const message = new Message({
-      content: messageContent,
-      sender: sender,
-      type: fileType,
-      createdAt: new Date(),
-      filePath: filePath,
-      base64:base64
-    });
+    // const message = new Message({
+    //   content: messageContent,
+    //   sender: sender,
+    //   type: fileType,
+    //   createdAt: new Date(),
+    //   filePath: filePath,
+    //   base64:base64
+    // }); 
 
-    const savedMessagePromise = message.save();
+    // const savedMessagePromise = message.save();
 
-    const [s3UploadResult, savedMessage] = await Promise.all([
+    const [s3UploadResult
+      // , savedMessage
+    ] = await Promise.all([
       s3UploadPromise,
-      savedMessagePromise,
+      // savedMessagePromise,
     ]);
 
     res
       .status(201)
-      .json( savedMessage );
+      .json( {fileUrl:messageContent , base64:base64} );
   } catch (err) { 
     console.error("Error processing file:", err);
     // Delete the temporary files
