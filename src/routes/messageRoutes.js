@@ -22,8 +22,9 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
-router.post("/upload", upload.single("file"), async (req, res) => {
+ 
+router.post("/upload", upload.single("file"), async (req, res) => { 
+  console.log("req.body", req.body);
   const { sender, filePath , base64} = req.body;
   const fileBuffer = req.file.buffer;
   const fileSize = req.file.size;
@@ -193,7 +194,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const s3UploadPromise = s3.send(new PutObjectCommand(params));
 
-    const messageContent = `https://files16.s3.amazonaws.com/uploads/${fileName}`;
+
+    const messageContent = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/uploads/${fileName}`;
+
     const message = new Message({
       content: messageContent,
       sender: sender,
@@ -212,15 +215,15 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const savedMessagePromise = message.save();
 
-    const [s3UploadResult] = await Promise.all([
+    const [s3UploadResult, savedMessage] = await Promise.all([
       s3UploadPromise,
-       savedMessagePromise,
+      savedMessagePromise,
     ]);
 
     res
       .status(201)
-      .json({ message:savedMessagePromise, fileUrl: s3UploadResult.Location });
-  } catch (err) {
+      .json( savedMessage );
+  } catch (err) { 
     console.error("Error processing file:", err);
     // Delete the temporary files
     if (fs.existsSync(tempInputFilePath)) {
