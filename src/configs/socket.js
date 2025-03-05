@@ -43,7 +43,7 @@ function init(server) {
         socket.on("AddNewFileMessage", async (data) => {
 
 
-            const { content, sender, createdAt, tempId } = data;
+            const { content, sender, createdAt, tempId , type} = data;
             const message = new Message({
                 content: content,
                 sender: sender,
@@ -51,7 +51,7 @@ function init(server) {
                 status: 'sent',
                 seen: false,
                 tempId: tempId,
-                type: 'image'
+                type: type
             });
 
             try {

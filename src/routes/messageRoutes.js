@@ -193,32 +193,29 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const s3UploadPromise = s3.send(new PutObjectCommand(params));
 
-    // Create a message with the S3 file link
-    const messageContent = `https://files16.s3.amazonaws.com/uploads/${fileName}`;
-    const message = new Message({
-      content: messageContent,
-      sender: sender,
-      type: 
-      fileType.startsWith("image/")
-        ? 
-        "image"
-        : fileType.startsWith("video/")
-        ? "video"
-        : "audio"
-        ,
-      createdAt: new Date(),
-      filePath: filePath,
-    });
+    // const messageContent = `https://files16.s3.amazonaws.com/uploads/${fileName}`;
+    // const message = new Message({
+    //   content: messageContent,
+    //   sender: sender,
+    //   type: 
+    //   fileType.startsWith("image/")
+    //     ? 
+    //     "image"
+    //     : fileType.startsWith("video/")
+    //     ? "video"
+    //     : "audio"
+    //     ,
+    //   createdAt: new Date(),
+    //   filePath: filePath,
+    // });
 
-    const savedMessagePromise = message.save();
+    // const savedMessagePromise = message.save();
 
-    // Wait for both the S3 upload and the database save to complete
     const [s3UploadResult, savedMessage] = await Promise.all([
       s3UploadPromise,
-      savedMessagePromise,
+      // savedMessagePromise,
     ]);
 
-    console.log("Message saved:", savedMessage);
     res
       .status(201)
       .json({ message: savedMessage, fileUrl: s3UploadResult.Location });
