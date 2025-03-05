@@ -11,7 +11,7 @@ const messageSchema = new mongoose.Schema({
   base64 :{ type: String, default: '' , required: false },
   type: {
     type: String,
-    enum: ['text', 'file', 'image', 'video', 'audio'],
+    // enum: ['text', 'file', 'image', 'video', 'audio'],
     required: true
   }, 
 });
