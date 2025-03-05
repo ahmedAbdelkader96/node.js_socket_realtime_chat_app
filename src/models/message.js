@@ -10,7 +10,7 @@ const messageSchema = new mongoose.Schema({
   filePath :{ type: String, default: '' , required: false },
   type: {
     type: String,
-    enum: ['text', 'file', 'image', 'video', 'sound'],
+    enum: ['text', 'file', 'image', 'video', 'audio'],
     required: true
   }, 
 });
