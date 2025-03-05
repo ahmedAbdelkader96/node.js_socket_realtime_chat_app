@@ -24,17 +24,27 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/upload", upload.single("file"), async (req, res) => {
-  const { sender, filePath } = req.body;
-  const fileBuffer = req.file.buffer;
-  const fileSize = req.file.size;
-  const fileType = req.file.mimetype;
 
-  // Generate a new MongoDB ObjectId
-  const fileId = new mongoose.Types.ObjectId();
-  const fileExtension = path.extname(req.file.originalname);
-  const fileName = `${fileId}${fileExtension}`;
 
   try {
+
+
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+
+    const { sender, filePath } = req.body;
+    const fileBuffer = req.file.buffer;
+    const fileSize = req.file.size;
+    const fileType = req.file.mimetype;
+  
+    // Generate a new MongoDB ObjectId
+    const fileId = new mongoose.Types.ObjectId();
+    const fileExtension = path.extname(req.file.originalname);
+    const fileName = `${fileId}${fileExtension}`;
+
     let optimizedBuffer = fileBuffer;
 
     // Apply different transformations based on file type and size
@@ -191,7 +201,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       // ContentDisposition: "inline",
     };
 
-    const s3UploadPromise = s3.send(new PutObjectCommand(params));
+    const s3UploadResult = s3.send(new PutObjectCommand(params));
+
+    const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/uploads/${fileName}`;
 
     // const messageContent = `https://files16.s3.amazonaws.com/uploads/${fileName}`;
     // const message = new Message({
@@ -211,14 +223,13 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     // const savedMessagePromise = message.save();
 
-    const [s3UploadResult] = await Promise.all([
-      s3UploadPromise,
-      // savedMessagePromise,
-    ]);
+    // const s3UploadResult = await s3UploadPromise;
+
+    // console.log("File uploaded to S3:", fileUrl);
 
     res
       .status(201)
-      .json({ fileUrl: s3UploadResult.Location });
+      .json({ fileUrl: fileUrl });
   } catch (err) {
     console.error("Error processing file:", err);
     // Delete the temporary files
