@@ -25,12 +25,11 @@ router.get("/", async (req, res) => {
 });
  
 router.post("/upload", upload.single("file"), async (req, res) => { 
-  console.log("req.body", req.body);
-  const { sender, filePath , base64} = req.body;
+  const { sender, filePath , base64 , type} = req.body;
   const fileBuffer = req.file.buffer;
   const fileSize = req.file.size;
   const fileExtension = path.extname(req.file.originalname);
-  const fileType = mime.lookup(fileExtension) || req.file.mimetype;
+  const fileType = req.body.type;
 
 
   // Generate a new MongoDB ObjectId
@@ -41,7 +40,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     let optimizedBuffer = fileBuffer;
 
     // Apply different transformations based on file type and size
-    if (fileType.startsWith("image/")) {
+    if (fileType.startsWith("image")) {
       if (fileSize < 5 * 1024 * 1024) {
         // Less than 5 MB
         optimizedBuffer = await sharp(fileBuffer)
@@ -61,7 +60,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
           .jpeg({ quality: 60 }) // Compress the image to 60% quality
           .toBuffer();
       }
-    } else if (fileType.startsWith("video/")) {
+    } else if (fileType.startsWith("video")) {
       // Ensure the temp directory exists
       const tempDir = path.join(__dirname, "../temp");
       if (!fs.existsSync(tempDir)) {
@@ -202,15 +201,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     const message = new Message({
       content: messageContent,
       sender: sender,
-      type: 
-      
-      fileType.startsWith("image/")
-        ? 
-        "image"
-        : fileType.startsWith("video/")
-        ? "video"
-        : "audio"
-        ,
+      type: fileType,
       createdAt: new Date(),
       filePath: filePath,
       base64:base64
