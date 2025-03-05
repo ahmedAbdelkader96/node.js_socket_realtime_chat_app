@@ -198,7 +198,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       Key: `uploads/${fileName}`,
       Body: optimizedBuffer,
       ContentType: fileType,
-      // ContentDisposition: "inline",
+      ContentDisposition: "inline",
     };
 
     const s3UploadResult = s3.send(new PutObjectCommand(params));
