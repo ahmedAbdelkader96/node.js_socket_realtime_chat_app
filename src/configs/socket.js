@@ -1,12 +1,8 @@
 const socketIo = require('socket.io');
 const Message = require('../models/message');
-const mongoose = require('mongoose');
-const { GridFSBucket } = require('mongodb');
-const mime = require('mime-types');
+
 
 let io;
-let gfsBucket;
-
 
 
 function init(server) {
@@ -18,9 +14,8 @@ function init(server) {
     });
 
     io.on("connection", async (socket) => {
-        console.log("New client connected");
 
-        socket.on("AddNewTextMessage", async (data) => {
+        socket.on("AddNewTextMessage", async (data, ack) => {
             const { content, sender, createdAt, status, tempId , type } = data;
             const message = new Message({
                 content: content,
@@ -35,8 +30,12 @@ function init(server) {
             try {
                 const savedMessage = await message.save();
                 io.emit('newTextMessage', savedMessage);
+                if (ack) ack({ success: true, message: savedMessage });
+
             } catch (err) {
                 console.error(err);
+                if (ack) ack({ success: false, error: "Failed to save message" });
+
             }
         });
 
