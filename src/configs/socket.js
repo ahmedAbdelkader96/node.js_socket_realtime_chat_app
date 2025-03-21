@@ -29,7 +29,7 @@ function init(server) {
 
             try {
                 const savedMessage = await message.save();
-                io.emit('newTextMessage', savedMessage);
+                io.emit('newMessage', savedMessage);
                 if (ack) ack({ success: true, message: savedMessage });
 
             } catch (err) {
@@ -56,8 +56,9 @@ function init(server) {
             });
  
             try {
-                io.emit('newFileMessage', data);
-                const savedMessage = await message.save();
+              const savedMessage = await message.save();
+
+                io.emit('newMessage', savedMessage);
                 // io.emit('newFileMessage', data);
             } catch (err) {
                 console.error(err);
