@@ -28,16 +28,22 @@ function init(server) {
                 base64:base64
             });
 
-            try {
-                const savedMessage = await message.save();
-                io.emit('newMessage', savedMessage);
-                if (ack) ack({ success: true, message: savedMessage });
+              // Emit the message immediately
+    io.emit('newMessage', message);
+    if (ack) ack({ success: true, message });
 
-            } catch (err) {
-                console.error(err);
-                if (ack) ack({ success: false, error: "Failed to save message" });
+    // Save the message to the database asynchronously
+    try {
+        const savedMessage = new Message(message);
+        await savedMessage.save();
+    } catch (err) {
+        console.error("Error saving message to database:", err);
 
-            }
+        // Notify the client about the failure
+        io.emit('messageSaveFailed', { tempId: message.tempId, error: "Failed to save message" });
+
+        if (ack) ack({ success: false, error: "Failed to save message" });
+    }
         });
 
  
