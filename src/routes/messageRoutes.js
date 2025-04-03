@@ -25,7 +25,7 @@ router.get("/", async (req, res) => {
 });
  
 router.post("/upload", upload.single("file"), async (req, res) => { 
-  const { sender, filePath , base64 , type} = req.body;
+  const {  type} = req.body;
   const fileBuffer = req.file.buffer;
   const fileSize = req.file.size;
   const fileExtension = path.extname(req.file.originalname);
@@ -218,7 +218,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     res
       .status(201)
-      .json( {fileUrl:messageContent , base64:base64} );
+      .json( {fileUrl:messageContent} );
   } catch (err) { 
     console.error("Error processing file:", err);
     // Delete the temporary files
