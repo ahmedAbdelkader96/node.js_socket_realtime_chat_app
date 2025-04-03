@@ -29,8 +29,10 @@ function init(server) {
             });
 
             try {
+              io.emit('newMessage', message);
+
                 const savedMessage = await message.save();
-                io.emit('newMessage', savedMessage);
+                //io.emit('newMessage', savedMessage);
                 if (ack) ack({ success: true, message: savedMessage });
 
             } catch (err) {
