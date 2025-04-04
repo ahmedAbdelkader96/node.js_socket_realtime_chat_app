@@ -9,6 +9,7 @@ const messageSchema = new mongoose.Schema({
   tempId :{ type: String, default: '' , required: false },
   filePath :{ type: String, default: '' , required: false },
   senderFilePath :{ type: String, default: '' , required: false },
+  imageData :{ type: String, default: '' , required: false },
   type: {
     type: String,
     // enum: ['text', 'file', 'image', 'video', 'audio'],
