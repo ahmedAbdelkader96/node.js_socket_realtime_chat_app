@@ -16,7 +16,7 @@ function init(server) {
     io.on("connection", async (socket) => {
 
         socket.on("AddNewMessage", async (data, ack) => {
-            const { content, sender, createdAt, status, tempId , type  , senderFilePath , imageData} = data;
+            const { content, sender, createdAt, status, tempId , type  , senderFilePath , base64} = data;
             const message = new Message({
                 content: content,
                 sender: sender,
@@ -26,7 +26,7 @@ function init(server) {
                 tempId: tempId,
                 type: type,
                 senderFilePath:senderFilePath,
-                imageData:imageData
+                base64:base64
             });
 
             try {
