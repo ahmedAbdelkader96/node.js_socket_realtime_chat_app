@@ -24,39 +24,40 @@ router.get("/", async (req, res) => {
   }
 });
  
-router.post("/upload", upload.single("file"), async (req, res) => { 
-  const {  type} = req.body;
+router.post("/upload", upload.single("file"), async (req, res) => {
+  const { type } = req.body;
   const fileBuffer = req.file.buffer;
   const fileSize = req.file.size;
   const fileExtension = path.extname(req.file.originalname);
   const fileType = type;
 
-
   // Generate a new MongoDB ObjectId
   const fileId = new mongoose.Types.ObjectId();
   const fileName = `${fileId}${fileExtension}`;
+
+  // Declare temp file paths outside the try block for proper cleanup
+  let tempInputFilePath;
+  let tempOutputFilePath;
 
   try {
     let optimizedBuffer = fileBuffer;
 
     if (fileType.startsWith("image")) {
+      // Optimize images based on file size
       if (fileSize < 5 * 1024 * 1024) {
-        // Less than 5 MB
         optimizedBuffer = await sharp(fileBuffer)
-          .resize({ width: 1000 }) // Resize the image to a width of 1000px
-          .jpeg({ quality: 80 }) // Compress the image to 80% quality
+          .resize({ width: 1000 })
+          .jpeg({ quality: 80 })
           .toBuffer();
       } else if (fileSize < 10 * 1024 * 1024) {
-        // Between 5 MB and 10 MB
         optimizedBuffer = await sharp(fileBuffer)
-          .resize({ width: 800 }) // Resize the image to a width of 800px
-          .jpeg({ quality: 70 }) // Compress the image to 70% quality
+          .resize({ width: 800 })
+          .jpeg({ quality: 70 })
           .toBuffer();
       } else {
-        // Greater than 10 MB
         optimizedBuffer = await sharp(fileBuffer)
-          .resize({ width: 600 }) // Resize the image to a width of 600px
-          .jpeg({ quality: 60 }) // Compress the image to 60% quality
+          .resize({ width: 600 })
+          .jpeg({ quality: 60 })
           .toBuffer();
       }
     } else if (fileType.startsWith("video")) {
@@ -66,164 +67,94 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         fs.mkdirSync(tempDir, { recursive: true });
       }
 
-      // Save the video buffer to a temporary file
-      const tempInputFilePath = path.join(tempDir, `input_${fileName}`);
-      const tempOutputFilePath = path.join(tempDir, `output_${fileName}`);
+      // Save the video buffer to temporary files
+      tempInputFilePath = path.join(tempDir, `input_${fileName}`);
+      tempOutputFilePath = path.join(tempDir, `output_${fileName}`);
       fs.writeFileSync(tempInputFilePath, fileBuffer);
 
-      // Apply different ffmpeg transformations based on file size
+      // Apply ffmpeg transformations based on file size
       if (fileSize < 10 * 1024 * 1024) {
         // Less than 10 MB
-        await new Promise((resolve, reject) => {
-          console.log("Less than 10 MB fileSize", fileSize / (1024 * 1024));
-
-          ffmpeg(tempInputFilePath)
-            .outputOptions([
-              // "-b:v 300k", // Set video bitrate to 800 kbps
-              // "-b:a 96k", // Set audio bitrate to 128 kbps
-              // "-crf 10",   // Use a CRF value for better quality
-              "-preset medium", // Balanced encoding speed and quality
-              // "-vf scale=720:-2" // Scale to a width of 720 pixels, maintaining aspect ratio
-            ]) // Set video bitrate to 1 Mbps
-            .save(tempOutputFilePath)
-            // .on('start', (commandLine) => {
-            //   console.log('Spawned Ffmpeg with command: ' + commandLine);
-            // })
-            // .on('stderr', (stderrLine) => {
-            //   console.log('Stderr output: ' + stderrLine);
-            // })
-            .on("end", resolve)
-            .on("error", reject);
+        await processVideo(tempInputFilePath, tempOutputFilePath, {
+          crf: 28,
+          preset: "ultrafast",
         });
       } else if (fileSize < 50 * 1024 * 1024) {
-        // Between 10 and 50 MB
-        await new Promise((resolve, reject) => {
-          console.log(
-            "Between 50 MB and 100 MB fileSize",
-            fileSize / (1024 * 1024)
-          );
-          ffmpeg(tempInputFilePath)
-            .outputOptions([
-              // "-b:v 300k", // Set video bitrate to 800 kbps
-              // "-b:a 96k", // Set audio bitrate to 128 kbps
-              "-crf 12", // Use a CRF value for better quality
-              "-preset medium", // Balanced encoding speed and quality
-              // "-vf scale=720:-2" // Scale to a width of 720 pixels, maintaining aspect ratio
-            ]) // Set video bitrate to 1 Mbps
-            .save(tempOutputFilePath)
-            .on("start", (commandLine) => {
-              console.log("Spawned Ffmpeg with command: " + commandLine);
-            })
-            .on("stderr", (stderrLine) => {
-              console.log("Stderr output: " + stderrLine);
-            })
-            .on("end", resolve)
-            .on("error", reject);
+        // Between 10 MB and 50 MB
+        await processVideo(tempInputFilePath, tempOutputFilePath, {
+          crf: 24,
+          preset: "fast",
         });
       } else if (fileSize < 100 * 1024 * 1024) {
         // Between 50 MB and 100 MB
-        await new Promise((resolve, reject) => {
-          console.log(
-            "Between 50 MB and 100 MB fileSize",
-            fileSize / (1024 * 1024)
-          );
-
-          ffmpeg(tempInputFilePath)
-            .outputOptions([
-              "-b:v 800k", // Set video bitrate to 800 kbps
-              "-b:a 128k", // Set audio bitrate to 128 kbps
-              "-crf 14", // Use a CRF value for better quality
-              "-preset medium", // Balanced encoding speed and quality
-              "-vf scale=720:-2", // Scale to a width of 720 pixels, maintaining aspect ratio
-            ]) // Resize the video to 960px width, height divisible by 2
-            .save(tempOutputFilePath)
-            .on("start", (commandLine) => {
-              console.log("Spawned Ffmpeg with command: " + commandLine);
-            })
-            .on("stderr", (stderrLine) => {
-              console.log("Stderr output: " + stderrLine);
-            })
-            .on("end", resolve)
-            .on("error", reject);
+        await processVideo(tempInputFilePath, tempOutputFilePath, {
+          crf: 20,
+          preset: "medium",
+          scale: "720:-2",
         });
       } else {
         // Greater than 100 MB
-        await new Promise((resolve, reject) => {
-          console.log("Greater than 100 MB fileSize", fileSize / (1024 * 1024));
-
-          ffmpeg(tempInputFilePath)
-            .outputOptions([
-              "-b:v 2000k", // Set video bitrate to 2000 kbps
-              "-b:a 192k", // Set audio bitrate to 192 kbps
-              "-crf 18", // Use a CRF value for higher quality
-              "-preset slow", // Slower encoding for better compression
-              "-vf scale=1080:-2", // Scale to a width of 1080 pixels, maintaining aspect ratio
-            ]) // Set video bitrate to 500 kbps
-            .save(tempOutputFilePath)
-            .on("start", (commandLine) => {
-              console.log("Spawned Ffmpeg with command: " + commandLine);
-            })
-            .on("stderr", (stderrLine) => {
-              console.log("Stderr output: " + stderrLine);
-            })
-            .on("end", resolve)
-            .on("error", reject);
+        await processVideo(tempInputFilePath, tempOutputFilePath, {
+          crf: 18,
+          preset: "slow",
+          scale: "1080:-2",
         });
       }
 
       // Read the optimized video file back into a buffer
       optimizedBuffer = fs.readFileSync(tempOutputFilePath);
-
-      // Delete the temporary files
-      if (fs.existsSync(tempInputFilePath)) {
-        fs.unlinkSync(tempInputFilePath);
-      }
-      if (fs.existsSync(tempOutputFilePath)) {
-        fs.unlinkSync(tempOutputFilePath);
-      }
     }
 
+    // Upload the optimized file to S3
     const params = {
       Bucket: process.env.AWS_S3_BUCKET_NAME,
       Key: `uploads/${fileName}`,
       Body: optimizedBuffer,
       ContentType: fileType,
-      // ContentDisposition: "inline",
     };
 
-    const s3UploadPromise = s3.send(new PutObjectCommand(params));
+    await s3.send(new PutObjectCommand(params));
 
+    const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/uploads/${fileName}`;
 
-    const messageContent = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/uploads/${fileName}`;
-
-    // const message = new Message({
-    //   content: messageContent,
-    //   sender: sender,
-    //   type: fileType,
-    //   createdAt: new Date(),
-    //   filePath: filePath,
-    //   base64:base64
-    // }); 
-
-    // const savedMessagePromise = message.save();
-
-    const s3UploadResult = s3UploadPromise;
-
-    res
-      .status(201)
-      .json( {fileUrl:messageContent} );
-  } catch (err) { 
+    res.status(201).json({ fileUrl });
+  } catch (err) {
     console.error("Error processing file:", err);
-    // Delete the temporary files
-    if (fs.existsSync(tempInputFilePath)) {
+    res.status(500).json({ error: "Failed to process file" });
+  } finally {
+    // Cleanup temporary files
+    if (tempInputFilePath && fs.existsSync(tempInputFilePath)) {
       fs.unlinkSync(tempInputFilePath);
     }
-    if (fs.existsSync(tempOutputFilePath)) {
+    if (tempOutputFilePath && fs.existsSync(tempOutputFilePath)) {
       fs.unlinkSync(tempOutputFilePath);
     }
-    res.status(500).json({ error: "Failed to process file" });
   }
 });
+
+/**
+ * Helper function to process videos using ffmpeg
+ */
+async function processVideo(inputPath, outputPath, options) {
+  return new Promise((resolve, reject) => {
+    const ffmpegCommand = ffmpeg(inputPath).outputOptions([
+      `-crf ${options.crf || 28}`, // Compression quality
+      `-preset ${options.preset || "ultrafast"}`, // Encoding speed
+      options.scale ? `-vf scale=${options.scale}` : null, // Scaling
+    ].filter(Boolean));
+
+    ffmpegCommand
+      .save(outputPath)
+      .on("start", (commandLine) => {
+        console.log("Spawned ffmpeg with command:", commandLine);
+      })
+      .on("stderr", (stderrLine) => {
+        console.log("ffmpeg stderr:", stderrLine);
+      })
+      .on("end", resolve)
+      .on("error", reject);
+  });
+}
 
 router.get("/files/:id", async (req, res) => {
   const fileId = req.params.id;
