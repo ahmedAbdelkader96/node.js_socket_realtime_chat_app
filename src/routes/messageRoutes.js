@@ -79,6 +79,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
           ffmpeg(tempInputFilePath)
             .outputOptions([
+              "-preset ultrafast",
               // "-b:v 300k", // Set video bitrate to 800 kbps
               // "-b:a 96k", // Set audio bitrate to 128 kbps
               // "-crf 10",   // Use a CRF value for better quality
@@ -106,6 +107,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
             .outputOptions([
               // "-b:v 300k", // Set video bitrate to 800 kbps
               // "-b:a 96k", // Set audio bitrate to 128 kbps
+              "-preset ultrafast",
               "-crf 12", // Use a CRF value for better quality
               "-preset medium", // Balanced encoding speed and quality
               // "-vf scale=720:-2" // Scale to a width of 720 pixels, maintaining aspect ratio
@@ -130,10 +132,10 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
           ffmpeg(tempInputFilePath)
             .outputOptions([
+              "-preset ultrafast",
               "-b:v 800k", // Set video bitrate to 800 kbps
               "-b:a 128k", // Set audio bitrate to 128 kbps
               "-crf 14", // Use a CRF value for better quality
-              "-preset medium", // Balanced encoding speed and quality
               "-vf scale=720:-2", // Scale to a width of 720 pixels, maintaining aspect ratio
             ]) // Resize the video to 960px width, height divisible by 2
             .save(tempOutputFilePath)
@@ -156,7 +158,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
               "-b:v 2000k", // Set video bitrate to 2000 kbps
               "-b:a 192k", // Set audio bitrate to 192 kbps
               "-crf 18", // Use a CRF value for higher quality
-              "-preset slow", // Slower encoding for better compression
+              "-preset ultrafast",
               "-vf scale=1080:-2", // Scale to a width of 1080 pixels, maintaining aspect ratio
             ]) // Set video bitrate to 500 kbps
             .save(tempOutputFilePath)
