@@ -1,5 +1,0 @@
-dependencies:
-  flutter:
-    sdk: flutter
-  speech_to_text: ^5.0.0
-  flutter_bloc: ^8.1.0
