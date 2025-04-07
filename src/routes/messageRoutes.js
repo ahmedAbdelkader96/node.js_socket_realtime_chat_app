@@ -117,7 +117,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/uploads/${fileName}`;
 
-    res.status(201).json({ 'fileUrl':fileUrl }); 
+    res.status(201).json({ fileUrl:fileUrl });  
   } catch (err) {
     console.error("Error processing file:", err);
     res.status(500).json({ error: "Failed to process file" });
